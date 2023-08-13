@@ -1,73 +1,139 @@
-import { useState } from 'react'
+import { SetStateAction, useState } from 'react'
 import './App.css'
 
+type Direction = 1|-1
+const defaultDirection: Direction = 1
+type ProcessFunc = (input: string) => string
+
+const sampleJson = '{"message": "hi"}'
+
 function App() {
-  const [result, setResult] = useState('')
-  const [textInput, setTextInput] = useState('')
+  
+  const [leftText, setLeftText] = useState(sampleJson)
+  const [rightText, setRightText] = useState('')
   const [alert, setAlert] = useState('')
-  const [actionName, setActionName] = useState('') 
-  const [sort, setSort] = useState('asc') 
-  const change = (e: string) => {
-    setTextInput(e.trim() ?? '')
+  const [actionName, setActionName] = useState('Choose action')
+  const [sort, setSort] = useState('asc')
+  const [direction, setDirection] = useState(defaultDirection)
+
+  const resultSetter = (processFunc: ProcessFunc) => {
+    if (direction===1) {
+      setRightText(processFunc(leftText))
+    } else {
+      setLeftText(processFunc(rightText))
+    }
+  }
+
+  const validate = () => {
+    if (leftText === '' && rightText === '') {
+      setAlert('please fill at least one side!')
+      return false
+    } else if (leftText === '' && direction === 1) {
+      setAlert('please fill left side or change direction!')
+      return false
+    } else if (rightText === '' && direction === -1) {
+      setAlert('please fill right side or change direction!')
+      return false
+    }
+    return true
+  }
+
+  const changeLeft = (e: string) => {
+    setLeftText(e.trim() ?? '')
     setAlert('')
   }
+
+  const changeRight = (e: string) => {
+    setRightText(e.trim() ?? '')
+    setAlert('')
+  }
+
   const stringify = () => {
-    setResult(JSON.stringify(textInput))
+    if (!validate()) return
+    resultSetter(function (input: string) {
+      return JSON.stringify(JSON.parse(JSON.stringify(input)));
+    })
     setActionName('stringify')
   }
+
   const parse = () => {
+    if (!validate()) return
     try {
-      setResult(JSON.parse(textInput))
+      resultSetter(function (input: string) {
+        return JSON.parse(input);
+      })
       setActionName('parse')
     } catch(err) {
       setAlert('invalid string!')
-      setResult('')
+      resultSetter(function (input: string) {
+        return JSON.parse('');
+      })
     }
   }
+
   const sortKey = (by: string) => {
+    if (!validate()) return
     setSort(by)
-    const parsed = JSON.parse(textInput)
-    const sorted = Object.keys(parsed).sort((a: string,b: string) => {
-      const x = b >= a;
-      if (sort === 'asc') {
-        return x ? 1 : -1
-      }
-      return x ? -1 : 1
-    }).reduce(
-      (obj: any, key: string) => { 
-        obj[key] = parsed[key as any]; 
-        return obj;
-      }, 
-      {}
-    );
     setActionName('sortKey')
-    setResult(JSON.stringify(sorted))
+
+    resultSetter(function (input: string) {
+      const parsed = JSON.parse(input)
+      const sorted = Object.keys(parsed).sort((a: string,b: string) => {
+        const x = b >= a;
+        if (sort === 'asc') {
+          return x ? 1 : -1
+        }
+        return x ? -1 : 1
+      }).reduce(
+        (obj: any, key: string) => { 
+          obj[key] = parsed[key as any]; 
+          return obj;
+        }, 
+        {}
+      );
+      return JSON.stringify(sorted)
+    })
+  }
+
+  const toggleDirection = () => {
+    if (direction===1) {
+      setDirection(-1)
+    } else {
+      setDirection(1)
+    }
   }
   return (
     <div className="App">
       <h1>JsoN UtilS</h1>
-      <div className="card">
-        <textarea className='input' onChange={(e) => change(e.target.value)} ></textarea>
-        <br/>
-        <p className='alert-text'>{alert}</p>
-      </div> 
-      <div className='action-btn'>
-        <button className={actionName === 'stringify' ? 'active':''} onClick={stringify}>stringify</button>
-        <button className={actionName === 'parse' ? 'active':''} onClick={parse}>parse</button>
-        <button className={actionName === 'sortKey' ? 'active':''} onClick={() => sortKey('asc')}>sortKey</button>
+      <p className='alert-text'>{alert}</p>
+
+      <div className="main-container flex-horizontal" >
+        <div className="card-left card">
+          <textarea className='json-textarea' onChange={(e) => changeLeft(e.target.value)} value={leftText}></textarea>
+        </div> 
+
+        <div className='action-wrapper flex-vertical'>
+          <button className={`action-button ${actionName === 'direction' ? 'active':''}`} onClick={() => toggleDirection()}>Toggle direction</button>
+
+          <h2>{`${direction === -1 ? '<<< ' :'' }${actionName}${direction === 1 ? ' >>>' : ''}`}</h2>
+          <button className='action-button' onClick={stringify}>stringify</button>
+          <button className='action-button' onClick={parse}>parse</button>
+          <button className='action-button' onClick={() => sortKey('asc')}>sortKey</button>
+          {
+            actionName === 'sortKey' &&
+            <div className='sub-action-btn'>
+              <button className={sort === 'asc' ? 'active':''} onClick={() => sortKey('asc')}>ASC</button>
+              <button className={sort === 'desc' ? 'active':''} onClick={() => sortKey('desc')}>DESC</button>
+            </div>
+          }
+        </div>
+
+        <div className="card-right card">
+          <textarea className='json-textarea' onChange={(e) => changeRight(e.target.value)} value={rightText}></textarea>
+        </div>
       </div>
-      <div className="card-left">
-        <h2>{actionName} Results</h2>
-        {
-          actionName === 'sortKey' &&
-          <div className='sub-action-btn'>
-            <button className={sort === 'asc' ? 'active':''} onClick={() => sortKey('asc')}>ASC</button>
-            <button className={sort === 'desc' ? 'active':''} onClick={() => sortKey('desc')}>DESC</button>
-          </div>
-        }
-        <br/>
-        <textarea className='result' readOnly value={result}></textarea>
-      </div>
+      
+
       <p className="read-the-docs">
         Check out <a href='https://github.com/wadjakorn/json-utils'>Wadjakorn Github</a>
       </p>
