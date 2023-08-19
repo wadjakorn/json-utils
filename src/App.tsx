@@ -48,6 +48,22 @@ function App() {
     setAlert('')
   }
 
+  const format = () => {
+    if (!validate()) return
+    resultSetter(function (input: string) {
+      return formatIndent(input);
+    })
+    setActionName('format')
+  }
+
+  const minify = () => {
+    if (!validate()) return
+    resultSetter(function (input: string) {
+      return JSON.stringify(JSON.parse(input));
+    })
+    setActionName('minify')
+  }
+
   const stringify = () => {
     if (!validate()) return
     resultSetter(function (input: string) {
@@ -91,7 +107,7 @@ function App() {
         }, 
         {}
       );
-      return JSON.stringify(sorted)
+      return formatIndent(JSON.stringify(sorted))
     })
   }
 
@@ -102,6 +118,11 @@ function App() {
       setDirection(1)
     }
   }
+
+  function formatIndent(input: string) {
+    return JSON.stringify(JSON.parse(input), undefined, 4);
+  }
+
   return (
     <div className="App">
       <h1>JsoN UtilS</h1>
@@ -116,6 +137,8 @@ function App() {
           <button className={`action-button ${actionName === 'direction' ? 'active':''}`} onClick={() => toggleDirection()}>Toggle direction</button>
 
           <h2>{`${direction === -1 ? '<<< ' :'' }${actionName}${direction === 1 ? ' >>>' : ''}`}</h2>
+          <button className='action-button' onClick={format}>format</button>
+          <button className='action-button' onClick={minify}>minify</button>
           <button className='action-button' onClick={stringify}>stringify</button>
           <button className='action-button' onClick={parse}>parse</button>
           <button className='action-button' onClick={() => sortKey('asc')}>sortKey</button>
